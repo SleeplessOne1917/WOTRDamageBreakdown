@@ -1,15 +1,10 @@
-﻿using JetBrains.Annotations;
-using Kingmaker;
-using Kingmaker.Blueprints.Root;
-using Kingmaker.EntitySystem;
+﻿using Kingmaker.EntitySystem;
 using Kingmaker.Enums;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
-using Kingmaker.Utility;
 using System.Reflection;
 using System.Text;
-using UnityEngine;
 using UnityModManagerNet;
 
 namespace WOTRDamageBreakdown;
