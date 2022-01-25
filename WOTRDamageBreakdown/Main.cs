@@ -52,11 +52,7 @@ namespace WOTRDamageBreakdown
             {
                 if (modifiers[i].Value != 0)
                 {
-                    string source;
-                    if (i == 0)
-                        source = "Attribute";
-                    else
-                        source = modifiers[i].Fact.GetName();
+                   var source = modifiers[i].Fact.GetName();
 
                     sb.AppendBonus(modifiers[i].Value, source, modifiers[i].Descriptor);
                 }
@@ -65,7 +61,23 @@ namespace WOTRDamageBreakdown
 
         public static string GetName(this EntityFact entityFact) { 
             var pascalCaseName = entityFact?.Blueprint?.name ?? entityFact?.GetType().Name ?? "Other";
-            return pascalCaseName;
+            pascalCaseName = pascalCaseName.Replace("Feature", "").Replace("Buff", "").Replace("Effect", "");
+            var returnString = pascalCaseName[0].ToString();
+
+            for (var i = 1; i < pascalCaseName.Length; ++i)
+            {
+                if (pascalCaseName[i].IsUpperCase())
+                    returnString += " ";
+
+                returnString += pascalCaseName[i];
+            }
+
+            return returnString;
+        }
+
+        public static bool IsUpperCase(this char character)
+        {
+            return character <= 90 && character >= 65;
         }
     }
 
