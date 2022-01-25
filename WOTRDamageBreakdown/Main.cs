@@ -2,6 +2,7 @@
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.Enums;
+using Kingmaker.Items;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
@@ -41,7 +42,7 @@ namespace WOTRDamageBreakdown
             return ModifierDescriptorComparer.Instance.Compare(x.Descriptor, y.Descriptor);
         }
 
-        public static void AppendDamageModifiersBreakdown(this StringBuilder sb, List<Modifier> modifiers)
+        public static void AppendDamageModifiersBreakdown(this StringBuilder sb, List<Modifier> modifiers, ItemEntityWeapon weapon)
         {
             if (modifiers.Count <= 0)
                 return;
@@ -52,24 +53,32 @@ namespace WOTRDamageBreakdown
             {
                 if (modifiers[i].Value != 0)
                 {
-                   var source = modifiers[i].Fact.GetName();
+                    string source;
+                    if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
+                    {
+                        source = weapon.Blueprint.Name;
+                    }
+                    else
+                    {
+                        source = modifiers[i].Fact?.GetName();
+                    }
+
 
                     sb.AppendBonus(modifiers[i].Value, source, modifiers[i].Descriptor);
                 }
             }
         }
 
-        public static string GetName(this EntityFact entityFact) { 
-            var pascalCaseName = entityFact?.Blueprint?.name ?? entityFact?.GetType().Name ?? "Other";
-            pascalCaseName = pascalCaseName.Replace("Feature", "").Replace("Buff", "").Replace("Effect", "");
-            var returnString = pascalCaseName[0].ToString();
+        public static string GetName(this EntityFact fact) {
+            var pascalCase = fact?.Blueprint?.name ?? fact?.GetType().Name ?? "Other";
+            var returnString = pascalCase[0].ToString();
 
-            for (var i = 1; i < pascalCaseName.Length; ++i)
+            for (var i = 1; i < pascalCase.Length; ++i)
             {
-                if (pascalCaseName[i].IsUpperCase())
+                if (pascalCase[i].IsUpperCase())
                     returnString += " ";
 
-                returnString += pascalCaseName[i];
+                returnString += pascalCase[i];
             }
 
             return returnString;
@@ -92,7 +101,7 @@ namespace WOTRDamageBreakdown
                 sb.Append('\n');
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(totalBonus)}</b>\n");
                 DamageModifiersBreakdown.AddDamageRule(rule);
-                sb.AppendDamageModifiersBreakdown(rule.ResultList.SelectMany(r => r.Source.Modifiers).ToList());
+                sb.AppendDamageModifiersBreakdown(rule.ResultList.SelectMany(r => r.Source.Modifiers).ToList(), rule.DamageBundle.Weapon);
             }
         }
     }
