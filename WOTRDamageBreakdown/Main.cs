@@ -2,25 +2,27 @@
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.Enums;
-using Kingmaker.Items;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
 using Kingmaker.Utility;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityModManagerNet;
+using static UnityModManagerNet.UnityModManager.ModEntry;
 
 namespace WOTRDamageBreakdown
 {
 
     public class Main
     {
+        public static ModLogger logger;
+
         static bool Load(UnityModManager.ModEntry modEntry)
         {
+            logger = modEntry.Logger;
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             
@@ -31,19 +33,17 @@ namespace WOTRDamageBreakdown
 
     public static class DamageModifiersBreakdown
     {
-        public static void AddDamageRule(RuleDealDamage rule)
-        {
-            StatModifiersBreakdown.AddBonusSources(rule.AllBonuses);
-            StatModifiersBreakdown.AddStatModifiers(rule.Initiator.Stats.AdditionalDamage);
-        }
-
         private static int CompareModifiers(Modifier x, Modifier y)
         {
             return ModifierDescriptorComparer.Instance.Compare(x.Descriptor, y.Descriptor);
         }
 
-        public static void AppendDamageModifiersBreakdown(this StringBuilder sb, List<Modifier> modifiers, ItemEntityWeapon weapon)
+        public static void AppendDamageModifiersBreakdown(this StringBuilder sb, RuleDealDamage rule)
         {
+            var modifiers = rule.ResultList.SelectMany(r => r.Source.Modifiers).ToList();
+            var weapon = rule.DamageBundle.Weapon;
+            var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
+            
             if (modifiers.Count <= 0)
                 return;
 
@@ -54,7 +54,12 @@ namespace WOTRDamageBreakdown
                 if (modifiers[i].Value != 0)
                 {
                     string source;
-                    if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
+
+                    if (i == 0 && damageBonusStat.HasValue)
+                    {
+                        source = damageBonusStat.Value.ToString();
+                    }
+                    else if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
                     {
                         source = weapon.Blueprint.Name;
                     }
@@ -101,8 +106,7 @@ namespace WOTRDamageBreakdown
             {
                 sb.Append('\n');
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(totalBonus)}</b>\n");
-                DamageModifiersBreakdown.AddDamageRule(rule);
-                sb.AppendDamageModifiersBreakdown(rule.ResultList.SelectMany(r => r.Source.Modifiers).ToList(), rule.DamageBundle.Weapon);
+                sb.AppendDamageModifiersBreakdown(rule);
             }
         }
     }
