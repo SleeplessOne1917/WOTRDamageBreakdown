@@ -71,6 +71,7 @@ namespace WOTRDamageBreakdown
 
         public static string GetName(this EntityFact fact) {
             var pascalCase = fact?.Blueprint?.name ?? fact?.GetType().Name ?? "Other";
+            pascalCase = pascalCase.Replace("Feature", "").Replace("Buff", "");
             var returnString = pascalCase[0].ToString();
 
             for (var i = 1; i < pascalCase.Length; ++i)
