@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityModManagerNet;
 using static UnityModManagerNet.UnityModManager.ModEntry;
 
@@ -61,7 +62,9 @@ namespace WOTRDamageBreakdown
                     }
                     else if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
                     {
-                        source = weapon.Blueprint.Name;
+                        const string plusPattern = @"\s+\+\d+";
+                        var regex = new Regex(plusPattern);
+                        source = regex.Replace(weapon.Blueprint.Name, "");
                     }
                     else
                     {
