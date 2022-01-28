@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Kingmaker.Blueprints.Facts;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.Enums;
@@ -45,12 +46,17 @@ namespace WOTRDamageBreakdown
             var weapon = rule.DamageBundle.Weapon;
             var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
             
+            var totalBonus = rule.ResultList.Sum(damageValue => damageValue.Source.Modifiers.Sum(m => m.Value));
+            var trueTotalBonus = rule.ResultList.Sum(dv => dv.Source.TotalBonus);
+            if (totalBonus != trueTotalBonus)
+                modifiers.Add(new Modifier(trueTotalBonus - totalBonus, ModifierDescriptor.UntypedStackable));
+
             if (modifiers.Count <= 0)
                 return;
 
             modifiers.Sort(new Comparison<Modifier>(CompareModifiers));
 
-            for(var i = 0; i < modifiers.Count; ++i)
+            for (var i = 0; i < modifiers.Count; ++i)
             {
                 if (modifiers[i].Value != 0)
                 {
@@ -68,9 +74,8 @@ namespace WOTRDamageBreakdown
                     }
                     else
                     {
-                        source = modifiers[i].Fact?.GetName();
+                        source = modifiers[i].Fact?.GetName() ?? "Other";
                     }
-
 
                     sb.AppendBonus(modifiers[i].Value, source, modifiers[i].Descriptor);
                 }
@@ -78,8 +83,8 @@ namespace WOTRDamageBreakdown
         }
 
         public static string GetName(this EntityFact fact) {
-            var pascalCase = fact?.Blueprint?.name ?? fact?.GetType().Name ?? "Other";
-            pascalCase = pascalCase.Replace("Feature", "").Replace("Buff", "");
+            var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
+            pascalCase = pascalCase.Replace("Feature", string.Empty).Replace("Buff", string.Empty).Replace("Effect", string.Empty);
             var returnString = pascalCase[0].ToString();
 
             for (var i = 1; i < pascalCase.Length; ++i)
@@ -104,9 +109,11 @@ namespace WOTRDamageBreakdown
     {
         static void Postfix(StringBuilder sb, RuleDealDamage rule)
         {
-            int totalBonus = rule.ResultList.Sum(damageValue => damageValue.Source.Modifiers.Sum(m => m.Value));
-            if (rule != null && totalBonus > 0)
+            var totalBonus = rule.ResultList.Sum(damageValue => damageValue.Source.Modifiers.Sum(m => m.Value));
+            var isZeroDice = rule.ResultList.Any(r => r.Source.Dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || r.Source.Dice.Rolls == 0);
+            if (rule != null && totalBonus != 0 && !isZeroDice)
             {
+                Main.logger.Log($"{rule.Initiator.CharacterName} has dealt {rule.ResultList.Sum(dv => dv.Source.TotalBonus)} bonus damage");
                 sb.Append('\n');
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(totalBonus)}</b>\n");
                 sb.AppendDamageModifiersBreakdown(rule);
