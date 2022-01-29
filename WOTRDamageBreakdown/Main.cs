@@ -6,6 +6,7 @@ using Kingmaker.Enums;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
+using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
 using System;
 using System.Linq;
@@ -47,6 +48,17 @@ namespace WOTRDamageBreakdown
             var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
             
             if (totalBonus != trueTotal)
+            {
+                var unitPartWeaponTraining = rule.Initiator.Descriptor.Get<UnitPartWeaponTraining>();
+                var weaponTrainingRank = unitPartWeaponTraining?.GetWeaponRank(weapon);
+                if (weaponTrainingRank.HasValue && weaponTrainingRank.Value > 0)
+                {
+                    modifiers.Add(new Modifier(weaponTrainingRank.Value, unitPartWeaponTraining.WeaponTrainings.First(), ModifierDescriptor.None));
+                    totalBonus += weaponTrainingRank.Value;
+                }
+            }
+
+            if (totalBonus != trueTotal)
                 modifiers.Add(new Modifier(trueTotal - totalBonus, ModifierDescriptor.UntypedStackable));
 
             if (modifiers.Count <= 0)
@@ -59,6 +71,7 @@ namespace WOTRDamageBreakdown
                 if (modifiers[i].Value != 0)
                 {
                     string source;
+                    var fact = modifiers[i].Fact;
 
                     if (i == 0 && damageBonusStat.HasValue)
                     {
@@ -70,9 +83,14 @@ namespace WOTRDamageBreakdown
                         var regex = new Regex(plusPattern);
                         source = regex.Replace(weapon.Blueprint.Name, "");
                     }
+                    else if (fact != null && fact.GetName().Contains("Weapon Training"))
+                    {
+                        var parts = fact.GetName().Split(' ');
+                        source = $"{string.Join(" ", parts.Take(2))} ({string.Join(" ", parts.Skip(2))})";
+                    }
                     else
                     {
-                        source = modifiers[i].Fact?.GetName();
+                        source = fact?.GetName();
                     }
 
                     sb.AppendBonus(modifiers[i].Value, source, modifiers[i].Descriptor);
@@ -112,7 +130,7 @@ namespace WOTRDamageBreakdown
             var isZeroDice = rule.ResultList.Any(r => r.Source.Dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || r.Source.Dice.Rolls == 0);
             if (rule != null && trueTotal != 0 && !isZeroDice)
             {
-                Main.logger.Log($"{rule.Initiator.CharacterName} has dealt {trueTotal} bonus damage");
+                Main.logger.Log($"{rule.Initiator.CharacterName} has total bonus {trueTotal}, semi total {totalBonus}, summed bonus {rule.ResultList.Sum(dv => dv.Source.Bonus)}");
                 sb.Append('\n');
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(trueTotal)}</b>\n");
                 sb.AppendDamageModifiersBreakdown(rule, totalBonus, trueTotal);
