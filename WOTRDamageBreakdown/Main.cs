@@ -1,11 +1,12 @@
 ﻿using HarmonyLib;
-using Kingmaker.Blueprints.Facts;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
+using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Enums;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
+using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
 using System;
@@ -32,6 +33,11 @@ namespace WOTRDamageBreakdown
 
             return true;
         }
+    }
+
+    public static class Bolstered
+    {
+        public static int BolsteredValue;
     }
 
     public static class DamageModifiersBreakdown
@@ -76,6 +82,10 @@ namespace WOTRDamageBreakdown
                     if (i == 0 && damageBonusStat.HasValue)
                     {
                         source = damageBonusStat.Value.ToString();
+                    }
+                    else if (modifiers[i].Value == Bolstered.BolsteredValue && fact == null)
+                    {
+                        source = "Bolster Metamagic";
                     }
                     else if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
                     {
@@ -135,6 +145,50 @@ namespace WOTRDamageBreakdown
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(trueTotal)}</b>\n");
                 sb.AppendDamageModifiersBreakdown(rule, totalBonus, trueTotal);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(ContextActionDealDamage),
+        nameof(ContextActionDealDamage.GetDamageRule),
+        new Type[] { typeof(ContextActionDealDamage.DamageInfo), typeof(int)},
+        new ArgumentType[] {ArgumentType.Normal, ArgumentType.Out})]
+    class ContextActionDealDamagePatch
+    {
+        static void Postfix(ContextActionDealDamage.DamageInfo info, ref int bolsteredBonus, ref RuleDealDamage __result)
+        {
+            Bolstered.BolsteredValue = bolsteredBonus;
+
+            if (bolsteredBonus > 0)
+            {
+                var baseDamage = __result.DamageBundle.First();
+                baseDamage.AddModifier(new Modifier(bolsteredBonus, ModifierDescriptor.UntypedStackable));
+                baseDamage.Bonus -= bolsteredBonus;
+                Main.logger.Log($"Set bolstered to {bolsteredBonus}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(RuleDealDamage),
+    MethodType.Constructor,
+    new Type[] { typeof(UnitEntityData), typeof(UnitEntityData), typeof(DamageBundle) })]
+    class RuleDealDamagePatch1
+    {
+        static void Postfix()
+        {
+            Bolstered.BolsteredValue = 0;
+            Main.logger.Log("Reset bolstered");
+        }
+    }
+
+    [HarmonyPatch(typeof(RuleDealDamage),
+   MethodType.Constructor,
+   new Type[] { typeof(UnitEntityData), typeof(UnitEntityData), typeof(BaseDamage) })]
+    class RuleDealDamagePatch2
+    {
+        static void Postfix()
+        {
+            Bolstered.BolsteredValue = 0;
+            Main.logger.Log("Reset bolstered");
         }
     }
 }
