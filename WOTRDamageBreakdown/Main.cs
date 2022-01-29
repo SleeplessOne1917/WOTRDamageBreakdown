@@ -140,7 +140,6 @@ namespace WOTRDamageBreakdown
             var isZeroDice = rule.ResultList.Any(r => r.Source.Dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || r.Source.Dice.Rolls == 0);
             if (rule != null && trueTotal != 0 && !isZeroDice)
             {
-                Main.logger.Log($"{rule.Initiator.CharacterName} has total bonus {trueTotal}, semi total {totalBonus}, summed bonus {rule.ResultList.Sum(dv => dv.Source.Bonus)}");
                 sb.Append('\n');
                 sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(trueTotal)}</b>\n");
                 sb.AppendDamageModifiersBreakdown(rule, totalBonus, trueTotal);
@@ -154,7 +153,7 @@ namespace WOTRDamageBreakdown
         new ArgumentType[] {ArgumentType.Normal, ArgumentType.Out})]
     class ContextActionDealDamagePatch
     {
-        static void Postfix(ContextActionDealDamage.DamageInfo info, ref int bolsteredBonus, ref RuleDealDamage __result)
+        static void Postfix(ref int bolsteredBonus, ref RuleDealDamage __result)
         {
             Bolstered.BolsteredValue = bolsteredBonus;
 
@@ -163,7 +162,6 @@ namespace WOTRDamageBreakdown
                 var baseDamage = __result.DamageBundle.First();
                 baseDamage.AddModifier(new Modifier(bolsteredBonus, ModifierDescriptor.UntypedStackable));
                 baseDamage.Bonus -= bolsteredBonus;
-                Main.logger.Log($"Set bolstered to {bolsteredBonus}");
             }
         }
     }
@@ -176,7 +174,6 @@ namespace WOTRDamageBreakdown
         static void Postfix()
         {
             Bolstered.BolsteredValue = 0;
-            Main.logger.Log("Reset bolstered");
         }
     }
 
@@ -188,7 +185,6 @@ namespace WOTRDamageBreakdown
         static void Postfix()
         {
             Bolstered.BolsteredValue = 0;
-            Main.logger.Log("Reset bolstered");
         }
     }
 }
