@@ -91,7 +91,7 @@ namespace WOTRDamageBreakdown
                     {
                         const string plusPattern = @"\s+\+\d+";
                         var regex = new Regex(plusPattern);
-                        source = regex.Replace(weapon.Blueprint.Name, "");
+                        source = regex.Replace(weapon.Blueprint.Name, string.Empty);
                     }
                     else if (fact != null && fact.GetName().Contains("Weapon Training"))
                     {
