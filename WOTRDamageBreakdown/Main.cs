@@ -121,7 +121,7 @@ namespace WOTRDamageBreakdown
                 returnString += pascalCase[i];
             }
 
-            return returnString;
+            return returnString.Replace(" Of ", " of ");
         }
 
         public static bool IsUpperCase(this char character)
