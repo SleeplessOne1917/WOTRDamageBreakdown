@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
@@ -6,6 +7,7 @@ using Kingmaker.Enums;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
+using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
@@ -93,6 +95,11 @@ namespace WOTRDamageBreakdown
                         var regex = new Regex(plusPattern);
                         source = regex.Replace(weapon.Blueprint.Name, string.Empty);
                     }
+                    else if (fact != null && fact.GetName().Contains("Weapon Specialization"))
+                    {
+                        var typeName = weapon.Blueprint.Type.TypeName.ToString().Replace("Composite ", string.Empty);
+                        source = $"{fact.GetName()} ({typeName})";
+                    }
                     else if (fact != null && fact.GetName().Contains("Weapon Training"))
                     {
                         var parts = fact.GetName().Split(' ');
@@ -111,6 +118,18 @@ namespace WOTRDamageBreakdown
         public static string GetName(this EntityFact fact) {
             var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
             pascalCase = pascalCase.Replace("Feature", string.Empty).Replace("Buff", string.Empty).Replace("Effect", string.Empty).Replace("Feat", string.Empty);
+            var returnString = SpaceSeparatePascalCase(pascalCase);
+
+            return returnString.Replace(" Of ", " of ").Replace(" The ", " the ");
+        }
+
+        public static bool IsUpperCase(this char character)
+        {
+            return character <= 90 && character >= 65;
+        }
+
+        public static string SpaceSeparatePascalCase(string pascalCase)
+        {
             var returnString = pascalCase[0].ToString();
 
             for (var i = 1; i < pascalCase.Length; ++i)
@@ -121,12 +140,7 @@ namespace WOTRDamageBreakdown
                 returnString += pascalCase[i];
             }
 
-            return returnString.Replace(" Of ", " of ").Replace(" The ", " the ");
-        }
-
-        public static bool IsUpperCase(this char character)
-        {
-            return character <= 90 && character >= 65;
+            return returnString;
         }
     }
 
@@ -151,7 +165,7 @@ namespace WOTRDamageBreakdown
         nameof(ContextActionDealDamage.GetDamageRule),
         new Type[] { typeof(ContextActionDealDamage.DamageInfo), typeof(int)},
         new ArgumentType[] {ArgumentType.Normal, ArgumentType.Out})]
-    class ContextActionDealDamagePatch
+    class ContextActionDealDamageGetDamageRulePatch
     {
         static void Postfix(ref int bolsteredBonus, ref RuleDealDamage __result)
         {
