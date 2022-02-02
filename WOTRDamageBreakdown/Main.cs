@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
@@ -7,7 +6,6 @@ using Kingmaker.Enums;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
-using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
@@ -97,7 +95,7 @@ namespace WOTRDamageBreakdown
                     }
                     else if (fact != null && fact.GetName().Contains("Weapon Specialization"))
                     {
-                        var typeName = weapon.Blueprint.Type.TypeName.ToString().Replace("Composite ", string.Empty);
+                        var typeName = weapon.Blueprint.Type.TypeName.ToString().Remove("Composite ");
                         source = $"{fact.GetName()} ({typeName})";
                     }
                     else if (fact != null && fact.GetName().Contains("Weapon Training"))
@@ -117,7 +115,7 @@ namespace WOTRDamageBreakdown
 
         public static string GetName(this EntityFact fact) {
             var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
-            pascalCase = pascalCase.Replace("Feature", string.Empty).Replace("Buff", string.Empty).Replace("Effect", string.Empty).Replace("Feat", string.Empty);
+            pascalCase = pascalCase.Remove("Feature").Remove("Buff").Remove("Effect").Remove("Feat");
             var returnString = SpaceSeparatePascalCase(pascalCase);
 
             return returnString.Replace(" Of ", " of ").Replace(" The ", " the ");
@@ -126,6 +124,11 @@ namespace WOTRDamageBreakdown
         public static bool IsUpperCase(this char character)
         {
             return character <= 90 && character >= 65;
+        }
+
+        public static string Remove(this string str, string strToRemove)
+        {
+            return str.Replace(strToRemove, string.Empty);
         }
 
         public static string SpaceSeparatePascalCase(string pascalCase)
