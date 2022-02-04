@@ -3,9 +3,11 @@ using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Enums;
+using Kingmaker.Items;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
+using Kingmaker.UnitLogic.Buffs;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
@@ -15,18 +17,14 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityModManagerNet;
-using static UnityModManagerNet.UnityModManager.ModEntry;
 
 namespace WOTRDamageBreakdown
 {
 
     public class Main
     {
-        public static ModLogger logger;
-
         static bool Load(UnityModManager.ModEntry modEntry)
         {
-            logger = modEntry.Logger;
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             
@@ -62,6 +60,20 @@ namespace WOTRDamageBreakdown
                     modifiers.Add(new Modifier(weaponTrainingRank.Value, unitPartWeaponTraining.WeaponTrainings.First(), ModifierDescriptor.None));
                     totalBonus += weaponTrainingRank.Value;
                 }
+            }
+
+            ItemEntity ringOfPyromania;
+            if (totalBonus != trueTotal && trueTotal - totalBonus >= 5 && IsWearingRingWithName(rule.Initiator, "Ring of Pyromania", out ringOfPyromania) && rule.ResultList.First().Source.Type == DamageType.Energy)
+            {
+                modifiers.Add(new Modifier(5, ringOfPyromania.Facts.List.First(), ModifierDescriptor.UntypedStackable));
+                totalBonus += 5;
+            }
+
+            if (totalBonus != trueTotal && trueTotal - totalBonus >= 2 && rule.Initiator.Buffs.Enumerable.Any(b => b.Name == "Ring of Summons"))
+            {
+                var buff = rule.Initiator.Buffs.Enumerable.First(b => b.Name == "Ring of Summons");
+                modifiers.Add(new Modifier(2, buff, ModifierDescriptor.UntypedStackable));
+                totalBonus += 2;
             }
 
             if (totalBonus != trueTotal)
@@ -113,10 +125,30 @@ namespace WOTRDamageBreakdown
             }
         }
 
+        private static bool IsWearingRingWithName(UnitEntityData initiator, string name, out ItemEntity ring)
+        {
+            ring = null;
+
+            var ring1HasName = initiator.Body.Ring1.HasItem && initiator.Body.Ring1.Item.Name == name;
+            if (ring1HasName)
+                ring = initiator.Body.Ring1.Item;
+
+            var ring2HasName = initiator.Body.Ring2.HasItem && initiator.Body.Ring2.Item.Name == name;
+            if (ring2HasName)
+                ring = initiator.Body.Ring2.Item;
+
+            return ring1HasName || ring2HasName;
+        }
+
         public static string GetName(this EntityFact fact) {
+            if (fact is Buff buff)
+            {
+                return buff.Name.Remove("Enchantment"); ;
+            }
+
             var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
-            pascalCase = pascalCase.Remove("Feature").Remove("Buff").Remove("Effect").Remove("Feat");
-            var returnString = SpaceSeparatePascalCase(pascalCase);
+            pascalCase = pascalCase.Remove("Feature").Remove("Buff").Remove("Effect").Remove("Feat").Remove("Enchantment");
+            var returnString = pascalCase.SpaceSeparatePascalCase();
 
             return returnString.Replace(" Of ", " of ").Replace(" The ", " the ");
         }
@@ -131,7 +163,7 @@ namespace WOTRDamageBreakdown
             return str.Replace(strToRemove, string.Empty);
         }
 
-        public static string SpaceSeparatePascalCase(string pascalCase)
+        public static string SpaceSeparatePascalCase(this string pascalCase)
         {
             var returnString = pascalCase[0].ToString();
 
