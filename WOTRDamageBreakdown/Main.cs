@@ -2,6 +2,7 @@
 using Kingmaker.Blueprints.Root.Strings.GameLog;
 using Kingmaker.EntitySystem;
 using Kingmaker.EntitySystem.Entities;
+using Kingmaker.EntitySystem.Stats;
 using Kingmaker.Enums;
 using Kingmaker.Items;
 using Kingmaker.RuleSystem.Rules;
@@ -17,14 +18,18 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityModManagerNet;
+using static UnityModManagerNet.UnityModManager.ModEntry;
 
 namespace WOTRDamageBreakdown
 {
 
     public class Main
     {
+        public static ModLogger logger;
+
         static bool Load(UnityModManager.ModEntry modEntry)
         {
+            logger = modEntry.Logger;
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             
@@ -45,12 +50,41 @@ namespace WOTRDamageBreakdown
             return ModifierDescriptorComparer.Instance.Compare(x.Descriptor, y.Descriptor);
         }
 
+        private static bool IsSpell(ItemEntityWeapon weapon)
+        {
+            return weapon == null || weapon.Blueprint.Name == "Ray";
+        }
+
+        private static Modifier MapModifier(ModifiableValue.Modifier mod)
+        {
+            return new Modifier(mod.ModValue, mod.Source, mod.ModDescriptor);
+        }
+
         public static void AppendDamageModifiersBreakdown(this StringBuilder sb, RuleDealDamage rule, int totalBonus, int trueTotal)
         {
-            var modifiers = rule.ResultList.SelectMany(r => r.Source.Modifiers).ToList();
+            var modifiers = rule.ResultList.First().Source.Modifiers;
             var weapon = rule.DamageBundle.Weapon;
             var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
-            
+            var dice = rule.ResultList.First().Source.Dice;
+            DamageType damageType = rule.ResultList.First().Source.Type;
+
+            var additionalDamageModifiers = rule.Initiator.Stats.AdditionalDamage.Modifiers;
+            if (!IsSpell(weapon) && additionalDamageModifiers.Count() > 0)
+            {
+                var stackableModifiers = additionalDamageModifiers
+                    .Where(m => m.Stacks)
+                    .Select(MapModifier);
+                var nonStackableModifiers = additionalDamageModifiers
+                    .Where(m => !m.Stacks)
+                    .GroupBy(m => m.ModDescriptor)
+                    .Select(g => MapModifier(g.MaxBy(m => m.ModValue)));
+
+                modifiers.AddRange(stackableModifiers);
+                modifiers.AddRange(nonStackableModifiers);
+
+                totalBonus += stackableModifiers.Sum(m => m.Value) + nonStackableModifiers.Sum(m => m.Value);
+            }
+
             if (totalBonus != trueTotal)
             {
                 var unitPartWeaponTraining = rule.Initiator.Descriptor.Get<UnitPartWeaponTraining>();
@@ -60,20 +94,6 @@ namespace WOTRDamageBreakdown
                     modifiers.Add(new Modifier(weaponTrainingRank.Value, unitPartWeaponTraining.WeaponTrainings.First(), ModifierDescriptor.None));
                     totalBonus += weaponTrainingRank.Value;
                 }
-            }
-
-            ItemEntity ringOfPyromania;
-            if (totalBonus != trueTotal && trueTotal - totalBonus >= 5 && IsWearingRingWithName(rule.Initiator, "Ring of Pyromania", out ringOfPyromania) && rule.ResultList.First().Source.Type == DamageType.Energy)
-            {
-                modifiers.Add(new Modifier(5, ringOfPyromania.Facts.List.First(), ModifierDescriptor.UntypedStackable));
-                totalBonus += 5;
-            }
-
-            if (totalBonus != trueTotal && trueTotal - totalBonus >= 2 && rule.Initiator.Buffs.Enumerable.Any(b => b.Name == "Ring of Summons"))
-            {
-                var buff = rule.Initiator.Buffs.Enumerable.First(b => b.Name == "Ring of Summons");
-                modifiers.Add(new Modifier(2, buff, ModifierDescriptor.UntypedStackable));
-                totalBonus += 2;
             }
 
             if (totalBonus != trueTotal)
@@ -99,7 +119,7 @@ namespace WOTRDamageBreakdown
                     {
                         source = "Bolster Metamagic";
                     }
-                    else if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement && weapon != null)
+                    else if (modifiers[i].Descriptor == ModifierDescriptor.Enhancement)
                     {
                         const string plusPattern = @"\s+\+\d+";
                         var regex = new Regex(plusPattern);
@@ -125,25 +145,10 @@ namespace WOTRDamageBreakdown
             }
         }
 
-        private static bool IsWearingRingWithName(UnitEntityData initiator, string name, out ItemEntity ring)
-        {
-            ring = null;
-
-            var ring1HasName = initiator.Body.Ring1.HasItem && initiator.Body.Ring1.Item.Name == name;
-            if (ring1HasName)
-                ring = initiator.Body.Ring1.Item;
-
-            var ring2HasName = initiator.Body.Ring2.HasItem && initiator.Body.Ring2.Item.Name == name;
-            if (ring2HasName)
-                ring = initiator.Body.Ring2.Item;
-
-            return ring1HasName || ring2HasName;
-        }
-
         public static string GetName(this EntityFact fact) {
             if (fact is Buff buff)
             {
-                return buff.Name.Remove("Enchantment"); ;
+                return buff.Name; ;
             }
 
             var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
@@ -184,13 +189,19 @@ namespace WOTRDamageBreakdown
     {
         static void Postfix(StringBuilder sb, RuleDealDamage rule)
         {
-            var totalBonus = rule.ResultList.Sum(damageValue => damageValue.Source.Modifiers.Sum(m => m.Value));
-            int trueTotal = rule.ResultList.Sum(dv => dv.Source.TotalBonus);
-            var isZeroDice = rule.ResultList.Any(r => r.Source.Dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || r.Source.Dice.Rolls == 0);
-            if (rule != null && trueTotal != 0 && !isZeroDice)
+            if (rule == null)
+                return;
+
+            var firstDamage = rule.ResultList.Select(damageValue => damageValue.Source).First();
+            var totalBonus = firstDamage.Modifiers.Sum(m => m.Value);
+            int trueTotal = firstDamage.TotalBonus;
+            var dice = rule.ResultList.Select(r => r.Source.Dice).First();
+            var isZeroDice = dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || dice.Rolls == 0;
+
+            if (trueTotal != 0 && !isZeroDice)
             {
-                sb.Append('\n');
-                sb.Append($"<b>Damage bonus: {UIConsts.GetValueWithSign(trueTotal)}</b>\n");
+                sb.AppendLine();
+                sb.AppendLine($"<b>Damage bonus: {UIConsts.GetValueWithSign(trueTotal)}</b>");
                 sb.AppendDamageModifiersBreakdown(rule, totalBonus, trueTotal);
             }
         }
@@ -212,6 +223,15 @@ namespace WOTRDamageBreakdown
                 baseDamage.AddModifier(new Modifier(bolsteredBonus, ModifierDescriptor.UntypedStackable));
                 baseDamage.Bonus -= bolsteredBonus;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(ContextActionDealDamage), nameof(ContextActionDealDamage.GetDamageInfo))]
+    class ContextActionDealDamageGetDamageInfoPatch
+    {
+        static void Postfix(ContextActionDealDamage __instance)
+        {
+            Main.logger.Log($"Bonus value type: {__instance.Value.BonusValue.ValueType}");
         }
     }
 
