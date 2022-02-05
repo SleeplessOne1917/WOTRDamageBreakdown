@@ -88,7 +88,16 @@ namespace WOTRDamageBreakdown.Extensions
                     else if (fact != null && fact.GetName().Contains("Weapon Training"))
                     {
                         var parts = fact.GetName().Split(' ');
-                        source = $"{string.Join(" ", parts.Take(2))} ({string.Join(" ", parts.Skip(2))})";
+                        var last = parts.Last();
+                        if (last == "Double" || last == "Thrown")
+                        {
+                            parts.Append("Weapons");
+                        }
+
+                        if (last == "Hammers")
+                            source = $"{string.Join(" ", parts.Take(2))} (Hammers, Maces, and Flails)";
+                        else
+                            source = $"{string.Join(" ", parts.Take(2))} ({string.Join(" ", parts.Skip(2))})";
                     }
                     else
                     {
