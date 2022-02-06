@@ -19,7 +19,7 @@ namespace WOTRDamageBreakdown.Patches
             var firstDamage = rule.ResultList.Select(damageValue => damageValue.Source).First();
             var totalBonus = firstDamage.Modifiers.Sum(m => m.Value);
             int trueTotal = firstDamage.TotalBonus;
-            var dice = rule.ResultList.Select(r => r.Source.Dice).First();
+            var dice = firstDamage.Dice;
             var isZeroDice = dice.Dice == Kingmaker.RuleSystem.DiceType.Zero || dice.Rolls == 0;
 
             if (trueTotal != 0 && !isZeroDice)
