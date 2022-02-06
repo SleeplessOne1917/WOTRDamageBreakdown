@@ -66,7 +66,7 @@ namespace WOTRDamageBreakdown.Extensions
                     string source;
                     var fact = modifiers[i].Fact;
 
-                    if (i == 0 && damageBonusStat.HasValue)
+                    if (i == 0 && damageBonusStat.HasValue && modifiers[i].Descriptor == ModifierDescriptor.None)
                     {
                         source = damageBonusStat.Value.ToString();
                     }
