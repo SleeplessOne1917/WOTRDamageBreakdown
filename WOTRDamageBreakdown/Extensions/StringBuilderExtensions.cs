@@ -87,11 +87,11 @@ namespace WOTRDamageBreakdown.Extensions
                     }
                     else if (fact != null && fact.GetName().Contains("Weapon Training"))
                     {
-                        var parts = fact.GetName().Split(' ');
+                        var parts = fact.GetName().Split(' ').ToList();
                         var last = parts.Last();
                         if (last == "Double" || last == "Thrown")
                         {
-                            parts.Append("Weapons");
+                            parts.Add("Weapons");
                         }
 
                         if (last == "Hammers")
