@@ -4,7 +4,6 @@ using UnityModManagerNet;
 
 namespace WOTRDamageBreakdown
 {
-
     public class Main
     {
         static bool Load(UnityModManager.ModEntry modEntry)
