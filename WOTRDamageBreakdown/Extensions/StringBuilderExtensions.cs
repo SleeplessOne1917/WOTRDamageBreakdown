@@ -1,6 +1,5 @@
 ﻿using Kingmaker.EntitySystem.Stats;
 using Kingmaker.Enums;
-using Kingmaker.Items;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.RuleSystem.Rules.Damage;
 using Kingmaker.UI.Common;
