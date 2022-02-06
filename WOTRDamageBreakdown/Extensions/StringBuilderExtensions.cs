@@ -20,7 +20,6 @@ namespace WOTRDamageBreakdown.Extensions
             var modifiers = rule.ResultList.First().Source.Modifiers;
             var weapon = rule.DamageBundle.Weapon;
             var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
-            var dice = rule.ResultList.First().Source.Dice;
             DamageType damageType = rule.ResultList.First().Source.Type;
 
             var additionalDamageModifiers = rule.Initiator.Stats.AdditionalDamage.Modifiers;
