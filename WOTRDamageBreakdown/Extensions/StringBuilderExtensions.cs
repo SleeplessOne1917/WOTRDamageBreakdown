@@ -65,7 +65,7 @@ namespace WOTRDamageBreakdown.Extensions
                     string source;
                     var fact = modifiers[i].Fact;
 
-                    if (i == 0 && damageBonusStat.HasValue && modifiers[i].Descriptor == ModifierDescriptor.None && !fact.GetName().Contains("Weapon Training"))
+                    if (i == 0 && damageBonusStat.HasValue && modifiers[i].Descriptor == ModifierDescriptor.None && (!fact?.GetName()?.Contains("Weapon Training") ?? true))
                     {
                         source = damageBonusStat.Value.ToString();
                     }
