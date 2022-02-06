@@ -23,7 +23,7 @@ namespace WOTRDamageBreakdown.Extensions
             DamageType damageType = rule.ResultList.First().Source.Type;
 
             var additionalDamageModifiers = rule.Initiator.Stats.AdditionalDamage.Modifiers;
-            if (!IsSpell(weapon) && additionalDamageModifiers.Count() > 0)
+            if ((!rule.SourceAbility?.IsSpell ?? true) && (!rule.SourceAbility?.IsCantrip ?? true) && additionalDamageModifiers.Count() > 0)
             {
                 var stackableModifiers = additionalDamageModifiers
                     .Where(m => m.Stacks)
@@ -111,11 +111,6 @@ namespace WOTRDamageBreakdown.Extensions
         private static int CompareModifiers(Modifier x, Modifier y)
         {
             return ModifierDescriptorComparer.Instance.Compare(x.Descriptor, y.Descriptor);
-        }
-
-        private static bool IsSpell(ItemEntityWeapon weapon)
-        {
-            return weapon == null || weapon.Blueprint.Name == "Ray";
         }
 
         private static Modifier MapModifier(ModifiableValue.Modifier mod)
