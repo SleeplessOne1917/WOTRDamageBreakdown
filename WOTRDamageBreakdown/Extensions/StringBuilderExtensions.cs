@@ -79,12 +79,12 @@ namespace WOTRDamageBreakdown.Extensions
                         var regex = new Regex(plusPattern);
                         source = regex.Replace(weapon.Blueprint.Name, string.Empty);
                     }
-                    else if (fact != null && fact.GetName().Contains("Weapon Specialization"))
+                    else if (fact?.GetName()?.Contains("Weapon Specialization") ?? false)
                     {
                         var typeName = weapon.Blueprint.Type.TypeName.ToString().Remove("Composite ");
                         source = $"{fact.GetName()} ({typeName})";
                     }
-                    else if (fact != null && fact.GetName().Contains("Weapon Training"))
+                    else if (fact?.GetName()?.Contains("Weapon Training")  ?? false)
                     {
                         var parts = fact.GetName().Split(' ').ToList();
                         var last = parts.Last();
