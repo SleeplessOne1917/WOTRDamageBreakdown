@@ -9,7 +9,7 @@ namespace WOTRDamageBreakdown.Extensions
         {
             if (fact is Buff buff)
             {
-                return buff.Name; ;
+                return buff.Name;
             }
 
             var pascalCase = fact.Blueprint?.name ?? fact.GetType().Name;
