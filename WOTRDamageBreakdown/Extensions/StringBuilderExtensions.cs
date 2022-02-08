@@ -19,7 +19,6 @@ namespace WOTRDamageBreakdown.Extensions
             var modifiers = rule.ResultList.First().Source.Modifiers;
             var weapon = rule.DamageBundle.Weapon;
             var damageBonusStat = rule.AttackRoll?.WeaponStats.DamageBonusStat;
-            DamageType damageType = rule.ResultList.First().Source.Type;
 
             var additionalDamageModifiers = rule.Initiator.Stats.AdditionalDamage.Modifiers;
             if ((!rule.SourceAbility?.IsSpell ?? true) && (!rule.SourceAbility?.IsCantrip ?? true) && additionalDamageModifiers.Count() > 0)
