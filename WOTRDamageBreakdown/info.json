@@ -6,5 +6,6 @@
   "ManagerVersion": "0.24.0",
   "Requirements": [],
   "AssemblyName": "WOTRDamageBreakdown.dll",
-  "EntryMethod": "WOTRDamageBreakdown.Main.Load"
+  "EntryMethod": "WOTRDamageBreakdown.Main.Load",
+  "HomePage": "https://www.nexusmods.com/pathfinderwrathoftherighteous/mods/282"
 }
